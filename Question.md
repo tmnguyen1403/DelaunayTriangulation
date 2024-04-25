@@ -21,3 +21,8 @@ My understanding: Origin is the orbit? not the vertex point?
 2. So Org is node in a circular list?
 3. So we have to traverse the whole list to compare?
 
+
+## New question
+1. The rot assignment in make_edge
+2. What is the min_x,min_y;max_x,max_y of the random points
+3. Stuck in the basel loop - what to do?
