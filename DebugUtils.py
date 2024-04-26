@@ -10,6 +10,19 @@ def generate_random_points(num_points, min_xy, max_xy):
     points = np.column_stack((x_coords, y_coords))
     return points
 
+def read_data_file(file_name):
+    data = np.loadtxt(file_name,delimiter=",",dtype=float)
+    return data
+
+def save_sites(S,output_file):
+    with open(output_file,"w") as f:
+        for s in S:
+            f.write(f"{s.x},{s.y}\n")
+    
+def debug_edges(edges):
+    for edge in edges:
+        edge.debug()
+
 def generate_anotation(sites):
     anotate = {}
     for i,p in enumerate(sites):

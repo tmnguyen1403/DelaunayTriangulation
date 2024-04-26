@@ -1,13 +1,22 @@
-from DebugUtils import generate_random_points
+from DebugUtils import generate_random_points,read_data_file
 class Site:
     @staticmethod
     def generate_random_sites(num_sites, min_xy, max_xy):
         points = generate_random_points(num_sites,min_xy,max_xy)
-        S = []
-        for p in points:
-            S.append(Site(p[0],p[1]))
+        S = [Site.create_site(p) for p in points[:num_sites]]
         return S
     
+    @staticmethod
+    def create_site(p, precise=2):
+        round_x,round_y = round(p[0],precise),round(p[1], precise)
+        return Site(round_x,round_y)
+    
+    @staticmethod
+    def generate_from_file(num_sites, data_file):
+        points = read_data_file(data_file)
+        S = [Site.create_site(p) for p in points[:num_sites]]
+        return S
+
     def __init__(self,x,y):
         self.x = x
         self.y = y

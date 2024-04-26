@@ -26,3 +26,23 @@ My understanding: Origin is the orbit? not the vertex point?
 1. The rot assignment in make_edge
 2. What is the min_x,min_y;max_x,max_y of the random points
 3. Stuck in the basel loop - what to do?
+
+## Time
+Runtime in seconds
+Size | Dataset | Run 1 | Run 2 | Run 3
+10000 | 2 | 3.2s | | |
+100000 | 1 | 36.4 | 35.2 | 38.6 |
+100000 | 1 | 41.0 | 41.0 | 41.3 |
+1000000 | 1 | 6m43.9 |  | 6m43.8 | 6m30.4s
+1000000 | 2 | 8m7.1 | 7m24.9 | 6m | 7m30.7
+
+
+
+## Edge needed to draw:
+Size | Dataset | Run 1 | Run 2 | Run 3
+100000 | 1 | 290889 |
+100000 | 2 | 290655 |
+1000000 | 1 | 2854749 |
+1000000 | 2 | 2855202 |
+
+

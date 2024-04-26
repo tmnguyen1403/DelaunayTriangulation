@@ -25,7 +25,11 @@ way to refer to it is to specify one of its outgoing edges.
 The standard way of referring to a connected component of the edge structure 
 is by giving one of its directed edges.
 '''
+from enum import Enum
 
+class EdgeType(Enum):
+    NORMAL = "normal"
+    CROSS = "cross"
 class QuadEdge:
     name_id = 1
     def __init__(self):
@@ -53,9 +57,10 @@ class QuadEdge:
        # self.Edges = [Edge(self.Org,self.Dest,self)]*4
         #self.edge_index = 0
         self.active = True
+        self.type = EdgeType.NORMAL
 
     def debug(self):
-        print(f"name - active: {self.Name} - {self.active}")
+        print(f"name - active - type: {self.Name} - {self.active} - {self.type}")
 
     @staticmethod
     def Make_Edge(a, b):
@@ -155,6 +160,7 @@ class QuadEdge:
     def Connect(a,b):
         #print(f"\Connect - will create edge: {QuadEdge.name_id} ")
         e = QuadEdge.Make_Edge(a.Dest(),b.Org())
+        e.type = EdgeType.CROSS
         QuadEdge.Splice(e, a.Lnext())
         QuadEdge.Splice(e.Sym(), b)
         return e

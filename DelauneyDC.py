@@ -3,8 +3,10 @@ from QuadEdge import QuadEdge
 from AlgebraUtils import *
 class DelaunayDC:
     def __init__(self):
-        self.edge_store = []
+        self.edge_key = set()
+        self.edge_store = set()
         self.sorted_s = None
+        self.enable_save_edge = False
 
     @staticmethod
     def prepare_data(S):
@@ -14,7 +16,6 @@ class DelaunayDC:
         #2. Sort by y
         sorted_y = sorted(S, key = lambda s: s.y)
         sorted_xy = sorted(sorted_y, key = lambda s: s.x)
-        
         #3. Remove duplicate points
         i = 0
         while i < len(sorted_xy)-1:
@@ -27,10 +28,19 @@ class DelaunayDC:
         #     site.debug()
         return sorted_xy
     
+    def store_edge(self,edge):
+        key1 = (edge.Org().getXY(),edge.Dest().getXY())
+        key2 = (key1[1],key1[0])
+
+        if key1 not in self.edge_key and key2 not in self.edge_key:
+            self.edge_store.add(edge)
+            self.edge_key.add(key1)
+
     def start_solve(self, S):
         print("preparing data")
         sorted_s = DelaunayDC.prepare_data(S)
         self.sorted_s = sorted_s
+        self.edge_store = set()
         print(f"finish preparing data - length: {len(self.sorted_s)}")
         return self.solve(sorted_s)
     
@@ -39,9 +49,6 @@ class DelaunayDC:
         if length_S == 2:
             s1,s2 = S[0],S[1]
             a = QuadEdge.Make_Edge(s1,s2)
-            self.edge_store.append(a)
-            #How do we return two edges if we only make one quad edge?
-            # Which one is edge, which one is quad edge? Are they all edges only, or they are all quad edge
             return (a,a.Sym())
         elif length_S == 3:
             s1,s2,s3 = S[0],S[1],S[2]
@@ -49,22 +56,21 @@ class DelaunayDC:
             # and b connecting s2 to s3
             a = QuadEdge.Make_Edge(s1,s2)
             b = QuadEdge.Make_Edge(s2,s3)
-            self.edge_store.append(a)
-            self.edge_store.append(b)
-            #print("\nsplice(a.Sym(),b)")
             QuadEdge.Splice(a.Sym(),b)
             #Close the triangle
             if ccw(s1,s2,s3):
-                #print("\nccw(s1,s2,s3)")
-                #print("connect(b,a)")
                 c = QuadEdge.Connect(b,a)
-                self.edge_store.append(c)
+                if self.enable_save_edge:
+                    self.store_edge(a)
+                    self.store_edge(b)
+                    self.store_edge(c)
                 return (a,b.Sym())
             elif ccw(s1,s3,s2):
-                #print("\nccw(s1,s3,s2)")
-                #print("connect(b,a)")
                 c = QuadEdge.Connect(b,a)
-                self.edge_store.append(c)
+                if self.enable_save_edge:
+                    self.store_edge(a)
+                    self.store_edge(b)
+                    self.store_edge(c)
                 return (c.Sym(),c)
             else:
                 #print("the three points are collinear")
@@ -74,45 +80,26 @@ class DelaunayDC:
             ldo,ldi = self.solve(L)
             rdi,rdo = self.solve(R)
             #Compute the lower common tangent of L and R
-            max_loop = 10
-            counter = 0
             while rdi != None and ldi != None:
-                print(f"lr loop: {counter}")
-                counter += 1
-                # print(f"ldi:")
-                # ldi.Org().debug()
-                # ldi.Dest().debug()
-
-                # print(f"rdi:") 
-                # rdi.Org().debug()
-                # rdi.Dest().debug()
-
                 if left_of(rdi.Org(),ldi):
                     ldi = ldi.Lnext()
                 elif right_of(ldi.Org(),rdi):
                     rdi = rdi.Rprev()
                 else:
-                   # print("Finish compute the lower common tangent of L and R")
                     break
-                # counter += 1
-                # if counter > max_loop:
-                #     print("Stuck in the loop")
-                #     return None
+               
             #Create a first cross edge basel from rdi.Org to ldi.Org
             basel = QuadEdge.Connect(rdi.Sym(),ldi)
-            # print("cross edge I:")
-            # basel.Org().debug()
-            # basel.Dest().debug()
-            self.edge_store.append(basel)
+            if self.enable_save_edge:
+                self.store_edge(rdi.Sym())
+                self.store_edge(ldi)
+                self.store_edge(basel)
             if ldi.Org() == ldo.Org():
                 ldo = basel.Sym()
             if rdi.Org() == rdo.Org():
                 rdo = basel
             #Merge loop
-            counter = 0
             while True:
-                print(f"basel loop: {counter}")
-                counter += 1
                 #Locate the first L point (lcand.Dest) to be encoutered by the rising bubble
                 #and delete Ledges out of basel.Dest that fail the circle test
                 lcand = basel.Sym().Onext()
@@ -139,23 +126,24 @@ class DelaunayDC:
                     #print("Both lcand and rcand are invalid")
                     break
                 #if both are valid, then choose the approriate one using the incircle test
-                #print(f"lcand_valid: {lcand_valid}")
-                #print(f"rcand_valid: {rcand_valid}")
 
                 if not lcand_valid or (rcand_valid and in_circle(lcand.Dest(), lcand.Org(), rcand.Org(), rcand.Dest())):
                     #print("add cross edge basel from rcand.Dest to basel.Dest")
-                    basel = QuadEdge.Connect(rcand, basel.Sym())
-                    #print("cross edge II:")
-                    # basel.Org().debug()
-                    # basel.Dest().debug()
-                    self.edge_store.append(basel)
+                    baselSym = basel.Sym()
+                    basel = QuadEdge.Connect(rcand,baselSym)
+                    if self.enable_save_edge:
+                        self.store_edge(basel)
+                        self.store_edge(rcand)
+                        self.store_edge(baselSym)   
                 else:
                     #print("add cross edge basel from basel.Org to lcand.Dest")
-                    basel = QuadEdge.Connect(basel.Sym(), lcand.Sym())
-                    #print("cross edge III:")
-                    # basel.Org().debug()
-                    # basel.Dest().debug()
-                    self.edge_store.append(basel)
+                    baselSym = basel.Sym()
+                    lcandSym = lcand.Sym()
+                    basel = QuadEdge.Connect(baselSym, lcandSym)
+                    if self.enable_save_edge:
+                        self.store_edge(basel)
+                        self.store_edge(lcandSym)
+                        self.store_edge(baselSym)
                 #end if
             #End loop
             return (ldo, rdo)

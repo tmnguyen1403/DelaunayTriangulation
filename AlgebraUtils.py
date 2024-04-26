@@ -37,7 +37,7 @@ def ccw(s1,s2,s3):
     xb,yb = s2.x,s2.y
     xc,yc = s3.x,s3.y
     detT = det3((xa,ya,1),(xb,yb,1),(xc,yc,1)) 
-    detN = xa*(yb-yc) - ya*(xb-xc) + (xb*yc-xc*yb)
+    #detN = xa*(yb-yc) - ya*(xb-xc) + (xb*yc-xc*yb)
     #print(f"detT: {detT}")
     #print(f"detT: {detN}")
 
@@ -55,18 +55,23 @@ def create_4D(s):
     x,y = s.x,s.y
     return [x,y,x*x+y*y,1]
 
-def in_circle(s1,s2,s3,s4):
+def in_circle(s1,s2,s3,s4,debug=False):
     p1 = create_4D(s1)
     p2 = create_4D(s2)
     p3 = create_4D(s3)
     p4 = create_4D(s4)
-    detN = det4(p1,p2,p3,p4)
+    #detN = det4(p1,p2,p3,p4)
 
     #TODO: remove after done
     # calculate with numpy
-    #matrix = np.array([p1,p2,p3,p4])
-    #detM = np.linalg.det(matrix)
+    matrix = np.array([p1,p2,p3,p4])
+    detM = np.linalg.det(matrix)
     #print(f"detN4: {detN}")
     #print(f"detM4: {detM}")
     #assert(round(detN,0) == round(detM,0))
-    return detN > 0
+    # if debug:
+    #     with open("debug_in_circle1.txt","a") as f:
+    #         f.write(f"{p1};{p2};{p3};{p4};{detN};{detM}\n")
+    return detM > 0
+
+#[-440.53, -978.69, 1151900.797, 1];[-432.78, -781.5, 798040.7784, 1];[-432.78, -781.5, 798040.7784, 1];[-440.53, -978.69, 1151900.797, 1];1.5050377784064035e-05;0.0
