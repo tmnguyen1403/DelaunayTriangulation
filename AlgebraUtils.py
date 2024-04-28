@@ -74,4 +74,10 @@ def in_circle(s1,s2,s3,s4,debug=False):
     #         f.write(f"{p1};{p2};{p3};{p4};{detN};{detM}\n")
     return detM > 0
 
+def site_on_edge(s,e):
+    a = ccw(s,e.Org(),e.Dest())
+    b = ccw(s,e.Dest(),e.Org())
+    return not a and not b
+
+# Close to 0 case
 #[-440.53, -978.69, 1151900.797, 1];[-432.78, -781.5, 798040.7784, 1];[-432.78, -781.5, 798040.7784, 1];[-440.53, -978.69, 1151900.797, 1];1.5050377784064035e-05;0.0

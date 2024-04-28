@@ -90,16 +90,6 @@ class QuadEdge:
         quad_edges[2].next = quad_edges[2]
         quad_edges[3].next = quad_edges[1]
 
-        # base = QuadEdge()
-        # base.rot = quad_edges[1]
-        # base.next = quad_edges[0]
-        # base.org = a
-        # base.dest = b
-        # base.org = a
-        # base.dest = b
-        # print(f"org: {base.org}")
-        # print(f"dest: {base.dest}")
-
         return quad_edges[0]
 
     '''
@@ -172,6 +162,18 @@ class QuadEdge:
         QuadEdge.Splice(e, e.Oprev())
         QuadEdge.Splice(e.Sym(), e.Sym().Oprev())
         e.Delete()
+    
+    @staticmethod
+    def Swap(e):
+        #print(f"Delete edge: {e.Name}")
+        a = e.Oprev()
+        b = e.Sym().Oprev()
+        QuadEdge.Splice(e, a)
+        QuadEdge.Splice(e.Sym(),b)
+        QuadEdge.Splice(e, a.Lnext())
+        QuadEdge.Splice(e.Sym(), b.Lnext())
+        e.org = a.Dest()
+        e.dest = b.Dest()
 
     def Org(self):
         return self.org
