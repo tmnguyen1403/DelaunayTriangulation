@@ -11,6 +11,8 @@ class DelaunayInc:
         self.min_y = self.min_x
         self.max_y = self.max_x
         self.dummy_sites = []
+        self.face_record = dict() #Contain the starting edge, the points of the faces
+        self.current_face_id = 0
 
     @staticmethod
     def prepare_data(S):
@@ -66,77 +68,133 @@ class DelaunayInc:
                 new_edges.append(e)
         return new_edges
 
+    '''
+    Calculate the distance of a site s to a face by summing the vector norm of the point to three face sites
+    '''
+    def dist_to_face(self,s,face_id):
+        record = self.face_record.get(face_id,None)
+        if record == None:
+            return 0
+        e,points = record
+        print(f"record: {e.get_coor()} - points dist: {points}")
+        x,y = s.getXY()
+        p0 = np.array([x,y])
+        pa = np.array(list(points))
+        # Find the center of the triangle
+        center = np.sum(pa,axis=0)
+        # dist = [np.linalg.norm(p-p0) for p in pa]
+        # min_dist = min(dist)
+        # print(f"dist: {dist}\n")
+        dist = np.linalg.norm(center-p0)
+        print(f"dist: {dist}\n")
+        return dist
+
     def locate(self,x):
-        print("locate debug:")
+        print("\nlocate debug:")
         print(f"locate edge for: {x.getXY()}")
         chosen_edge = []
-        for key,e in self.edge_store.items():
-            counter = 0
-            print(f"starting edge: {key}")
+        seen_face = set()
+        neg_face_record = {}
+        neg_face_id = -2
+        for face_id,record in self.face_record.items():
+            if face_id in seen_face:
+                continue
+            e,_ = record
+            print(f"starting edge: {e.get_coor()} - face: {e.face}")
             seen_edge = set()
+            counter = 0
             while True:
-                #print(f"locate counter: {counter}")
+                print(f"locate counter: {counter}")
                 seen_edge.add(e)
                 counter += 1
                 eOnext = e.Onext()
                 eDprev = e.Dprev()
-                # print(f"e: {e.get_coor()}")
-                # print(f"eOnext: {eOnext.get_coor()}")
-                # print(f"eDprev: {eDprev.get_coor()}")
+                if e.face == -1:
+                    points = set()
+                    face_id = neg_face_id
+                    e.face = face_id
+                    neg_face_record[face_id] = (e,points)
+                    self.traverse_left(face_id=face_id,update_face=True,face_record=neg_face_record)
+                    neg_face_id -= 1
 
                 if x == e.Org() or x == e.Dest():
-                    #print(f"I. chosen edge: {e.get_coor()}")
+                    print(f"I. chosen edge: {e.get_coor()} - face: {e.face}")
                     chosen_edge.append(e)
                     break
                     #return e
                 elif right_of(x,e):
-                    #print(f"1. right of {self.make_key(e)}")
+                    print(f"1. right of {self.make_key(e)}")
+                    seen_face.add(e.face)
                     e = e.Sym()
+                    print(f"starting edge: {e.get_coor()} - face: {e.face}")
+                    counter = 0
                 elif left_of(x, eOnext):
-                    #print(f"2. not right of {eOnext.get_coor()}")
+                    print(f"2. not right of {eOnext.get_coor()}")
                     e = eOnext
                 elif left_of(x, eDprev):
-                    #print(f"3. not right of {eDprev.get_coor()}")
+                    print(f"3. not right of {eDprev.get_coor()}")
                     e = eDprev
                 else:
-                    #print(f"II. chosen edge: {e.get_coor()}")
+                    print(f"II. chosen edge: {e.get_coor()} - {e.face}")
+                    seen_face.add(e.face)
                     chosen_edge.append(e)
                     break
                     #return e
                 #avoid stuck in the loop because the point is outside of the triangle
                 # is it still work?
                 if e in seen_edge:
+                    print(f"stuck in the loop of face: {e.face}")
                     break
+        for face_id, record in neg_face_record.items():
+            self.face_record[face_id] = record
+
         print("Debug chosen edges:")
-        # Keep track of largest points beside the dummy 
-        #TODO: Improve this to remove the dummy edges
-        # Chose the edge that has smallest distance to the point?
-        # Test if picking any edges in a face, will it make any difference
-        candidate_edges = self.edge_filter_dummy(chosen_edge)
-        #candidate_edges = []
-        if len(candidate_edges) > 0:
-            print("Candidate edges")
-            for edge in candidate_edges:
-                print(f"{edge.get_coor()}")
-            print(f"\nFinal candidate edge: {candidate_edges[0].get_coor()}\n")
-            if candidate_edges[0].get_coor() == ((2,2),(4,0)):
-                print("Chosen edges")
-                for edge in chosen_edge:
-                    print(f"{edge.get_coor()}")
-                print(f"Final chosen edge: {chosen_edge[0].get_coor()}")
-                print(f"\n---Done Chosen Edges---\n")
-                #return chosen_edge[0]
-                print(f"\nFinal candidate edge: (6,2),(2,2)\n")
-                return chosen_edge[0]
-            return candidate_edges[0]
+        min_dist = float('inf')
+        result_edge = None
+        for edge in chosen_edge:
+            print(f"getting dist for face of edge: {edge.get_coor()} - face: {edge.face}")
+            face_id = edge.face
+            if face_id == -1:
+                raise(Exception("Face_id of a chosen edge should not be negative:"))
+            dist = self.dist_to_face(x,face_id=face_id)
+            if dist < min_dist:
+                min_dist = dist
+                result_edge = edge
+                print(f"dist: {dist} - edge: {result_edge.get_coor()} - face: {result_edge.face}")
+        return result_edge
+    
+    def traverse_left(self,face_id,update_face=True,face_record = {}):
+        if len(face_record) == 0:
+            e,points = self.face_record[face_id]
         else:
-            print("Chosen edges")
-            for edge in chosen_edge:
-                print(f"{edge.get_coor()}")
-            print(f"Final chosen edge: {chosen_edge[0].get_coor()}")
-            print(f"\n---Done Chosen Edges---\n")
-            return chosen_edge[0]
-        
+            e,points = face_record[face_id]
+
+        lnext = e.Lnext()
+        while lnext != e:
+            if update_face:
+                lnext.face = face_id
+            print(f"next: {lnext.get_coor()} -face: {lnext.face}")
+            self.add_points(lnext,points)
+            lnext = lnext.Lnext()
+
+    def add_points(self,e,points=set()):
+        c = e.get_coor()
+        points.add(c[0])
+        points.add(c[1])
+
+    def mark_face(self):
+        self.current_face_id = 0
+        self.face_record = dict()
+        for _, e in self.edge_store.items():
+            #Traverse edges that has the same left face
+            if self.face_record.get(e.face, None) != None:
+                continue
+            e.face = self.current_face_id
+            points = set()
+            self.add_points(e,points)
+            self.face_record[self.current_face_id] = (e,points)
+            self.traverse_left(face_id=self.current_face_id,update_face=True)
+            self.current_face_id += 1
     
     def insert_site(self,x):
         e = self.locate(x)
@@ -154,6 +212,8 @@ class DelaunayInc:
         base = QuadEdge.Make_Edge(first,x)
 
         QuadEdge.Splice(base,e)
+        max_loop = 40
+        counter = 0
         while e.Dest() != first:
             baseSym = base.Sym()
             base = QuadEdge.Connect(e, baseSym)
@@ -161,6 +221,10 @@ class DelaunayInc:
             self.store_edge(baseSym)
             self.store_edge(base)
             e = base.Oprev()
+            if counter > max_loop:
+                print(f"first: {first.getXY()}")
+                raise(Exception("Stuck in loop"))
+            counter += 1
         e = base.Oprev()
         # The suspect edges (from top to bottom) are e(.Onext.Lprev)k for k = 0,1,...
         # The bottom edge has .Org = first.
@@ -259,9 +323,27 @@ class DelaunayInc:
         if len(self.edge_store) == 0:
             print("Check dummy_triangle creation")
             return
-        S = DelaunayInc.prepare_data(S)
+        #S = DelaunayInc.prepare_data(S)
 
         for x in S:
+            self.mark_face()
+            print("\nFace Debug")
+            for key, e in self.edge_store.items():
+                print(f"{e.get_coor()} - {e.face}")
+            print("\n")
+            print("\nEdge face debug")
+            for face_id, value in self.face_record.items():
+                e, points = value
+                print(f"start edge: {e.get_coor()} - face: {e.face}")
+                self.traverse_left(face_id=face_id,update_face=False)
+                print(f"face points: {points}")
+            # for key, e in self.edge_store.items():
+            #     if e.face in seen_face:
+            #         continue
+            #     print(f"start edge: {e.get_coor()} - face: {e.face}")
+            #     self.traverse_left(e,e.face,set_face=False)
+            #     seen_face.add(e.face)
+
             self.insert_site(x)
 #update key
 '''
@@ -272,6 +354,20 @@ TODO:
  
 '''
 if __name__ == "__main__":
+    def are_collinear(points):
+        # Check if the slope between any pair of points is the same
+        x1, y1 = points[0]
+        x2, y2 = points[1]
+        x3, y3 = points[2]
+        
+        # Calculate slopes
+        slope1 = (y2 - y1) * (x3 - x2)
+        slope2 = (y3 - y2) * (x2 - x1)
+        
+        # Check if slopes are equal (or almost equal due to floating point precision)
+        print(f"slope 1: {slope1} - slope 2: {slope2}")
+        return np.isclose(slope1, slope2)
+
     S = [Site(0,0), Site(1,1)]
     e = QuadEdge.Make_Edge(S[0],S[1])
     #collinear test
@@ -285,3 +381,20 @@ if __name__ == "__main__":
         on_edge = site_on_edge(x,e)
         assert(on_edge == False)
     dinc = DelaunayInc()
+    #
+    print("Test harder case")
+    S = [Site(-1.02,-8.55), Site(7.64,1.29),  Site(5.55,-1.01)]
+    e = QuadEdge.Make_Edge(S[0],S[1])
+    on_edge = site_on_edge(S[2],e)
+    collinear = are_collinear([(-1.02,-8.55), (7.64,1.29), (5.55,-1.01)])
+    print(f"collinear: {collinear}")
+    #assert(on_edge == True)
+
+    #
+    print("Test edge case")
+    S = [Site(5.28,-7.41), Site(40,-10), Site(3.11,-6.93)]
+    e = QuadEdge.Make_Edge(S[0],S[1])
+    on_edge = site_on_edge(S[2],e)
+    collinear = are_collinear([(5.28,-7.41), (40,-10), (3.11,-6.93)])
+    print(f"collinear: {collinear}")
+    #assert(on_edge == True)
